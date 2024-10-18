@@ -1,4 +1,4 @@
 from .gfile import GFile
 
 __author__ = """Sraqzit, fireattack"""
-__version__ = '3.2.2'
+__version__ = '3.2.3'
