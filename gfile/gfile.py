@@ -222,7 +222,7 @@ class GFile:
         return self.data['url']
 
 
-    def download(self, filename=None):
+    def download(self, output=None):
         m = re.search(r'^https?:\/\/\d+?\.gigafile\.nu\/([a-z0-9-]+)$', self.uri)
         if not m:
             print('Invalid URL.')
@@ -258,12 +258,15 @@ class GFile:
 
         for idx, (web_name, size_str, file_id) in enumerate(files_info, 1):
             print(f'Name: {web_name}, size: {size_str}, id: {file_id}')
-            # only sanitize web filename. User provided ones are on their own.
-            if not filename:
+            # only sanitize web filename. User provided output string(s) are on their own.
+            if not output:
                 filename = re.sub(r'[\\/:*?"<>|]', '_', web_name)
-            elif len(files_info) > 1:
-                # if there are more than one files, append idx to the filename
-                filename = filename + f'_{idx}'
+            else:
+                if len(files_info) > 1:
+                    # if there are more than one files, append idx to the filename
+                    filename = output + f'_{idx}'
+                else:
+                    filename = output
 
             download_url = self.uri.rsplit('/', 1)[0] + '/download.php?file=' + file_id
             if self.key:
@@ -289,7 +292,7 @@ class GFile:
             if self.pbar: self.pbar.close()
 
             filesize_downloaded = Path(temp).stat().st_size
-            print(f'Filesize check: expected: {filesize}; actual: {filesize_downloaded}')
+            print(f'Filesize check: expected: {filesize}; actual: {filesize_downloaded}', end=' ')
             if filesize == filesize_downloaded:
                 print("Succeeded.")
                 rename(temp, filename)
