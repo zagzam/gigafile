@@ -225,57 +225,72 @@ class GFile:
             print('Invalid URL.')
             return
         r = self.session.get(self.uri) # setup cookie
+
+        files_info = []
+
         try:
             soup = BeautifulSoup(r.text, 'html.parser')
             if soup.select_one('#contents_matomete'):
-                print('Matomete mode. Getting info of first file (currently only support one file)...')
-                ele = soup.select_one('.matomete_file')
-                web_name = ele.select_one('.matomete_file_info > span:nth-child(2)').text.strip()
-                file_id = re.search(r'download\(\d+, *\'(.+?)\'', ele.select_one('.download_panel_btn_dl')['onclick'])[1]
-                size_str = re.search(r'（(.+?)）', ele.select_one('.matomete_file_info > span:nth-child(3)').text.strip())[1]
+                print('Matomete mode. Files will be downloaded one by one.')
+                for ele in soup.select('.matomete_file'):
+                    web_name = ele.select_one('.matomete_file_info > span:nth-child(2)').text.strip()
+                    file_id = re.search(r'download\(\d+, *\'(.+?)\'', ele.select_one('.download_panel_btn_dl')['onclick'])[1]
+                    size_str = re.search(r'（(.+?)）', ele.select_one('.matomete_file_info > span:nth-child(3)').text.strip())[1]
+                    files_info.append((web_name, size_str, file_id))
             else:
                 file_id = m[1]
                 size_str = soup.select_one('.dl_size').text.strip()
                 web_name = soup.select_one('#dl').text.strip()
-
-            print(f'Name: {web_name}, size: {size_str}, id: {file_id}')
+                files_info.append((web_name, size_str, file_id))
         except Exception as ex:
             print(f'ERROR! Failed to parse the page {self.uri}.')
             print(ex)
             print('Please report it back to the developer.')
-
-        if not filename:
-            # only sanitize web filename. User provided ones are on their own.
-            filename = re.sub(r'[\\/:*?"<>|]', '_', web_name)
-        download_url = self.uri.rsplit('/', 1)[0] + '/download.php?file=' + file_id
-        if self.key:
-            download_url += f'&dlkey={self.key}'
-        if self.aria2:
-            cookie_str = "; ".join([f"{cookie.name}={cookie.value}" for cookie in self.session.cookies])
-            cmd = ['aria2c', download_url, '--header', f'Cookie: {cookie_str}', '-o', filename]
-            cmd.extend(self.aria2.split(' '))
-            run(cmd)
             return
 
-        temp = filename + '.dl'
+        downloaded = []
 
-        with self.session.get(download_url, stream=True) as r:
-            r.raise_for_status()
-            filesize = int(r.headers['Content-Length'])
-            if self.progress:
-                desc = filename if len(filename) <= 20 else filename[0:11] + '..' + filename[-7:]
-                self.pbar = tqdm(total=filesize, unit='B', unit_scale=True, unit_divisor=1024, desc=desc)
-            with open(temp, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=self.chunk_copy_size):
-                    f.write(chunk)
-                    if self.pbar: self.pbar.update(len(chunk))
-        if self.pbar: self.pbar.close()
+        if len(files_info) > 1:
+            print(f'Found {len(files_info)} files in the page.')
 
-        filesize_downloaded = Path(temp).stat().st_size
-        print(f'Filesize check: expected: {filesize}; actual: {filesize_downloaded}')
-        if filesize == filesize_downloaded:
-            print("Succeeded.")
-            rename(temp, filename)
-        else:
-            print(f"Downloaded file is corrupt. Please check the broken file at {temp} and delete it yourself if needed.")
-        return filename
+        for idx, (web_name, size_str, file_id) in enumerate(files_info, 1):
+            print(f'Name: {web_name}, size: {size_str}, id: {file_id}')
+            # only sanitize web filename. User provided ones are on their own.
+            if not filename:
+                filename = re.sub(r'[\\/:*?"<>|]', '_', web_name)
+            elif len(files_info) > 1:
+                # if there are more than one files, append idx to the filename
+                filename = filename + f'_{idx}'
+
+            download_url = self.uri.rsplit('/', 1)[0] + '/download.php?file=' + file_id
+            if self.key:
+                download_url += f'&dlkey={self.key}'
+            if self.aria2:
+                cookie_str = "; ".join([f"{cookie.name}={cookie.value}" for cookie in self.session.cookies])
+                cmd = ['aria2c', download_url, '--header', f'Cookie: {cookie_str}', '-o', filename]
+                cmd.extend(self.aria2.split(' '))
+                run(cmd)
+                continue
+
+            temp = filename + '.dl'
+            with self.session.get(download_url, stream=True) as r:
+                r.raise_for_status()
+                filesize = int(r.headers['Content-Length'])
+                if self.progress:
+                    desc = filename if len(filename) <= 20 else filename[0:11] + '..' + filename[-7:]
+                    self.pbar = tqdm(total=filesize, unit='B', unit_scale=True, unit_divisor=1024, desc=desc)
+                with open(temp, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=self.chunk_copy_size):
+                        f.write(chunk)
+                        if self.pbar: self.pbar.update(len(chunk))
+            if self.pbar: self.pbar.close()
+
+            filesize_downloaded = Path(temp).stat().st_size
+            print(f'Filesize check: expected: {filesize}; actual: {filesize_downloaded}')
+            if filesize == filesize_downloaded:
+                print("Succeeded.")
+                rename(temp, filename)
+            else:
+                print(f"Downloaded file is corrupt. Please check the broken file at {temp} and delete it yourself if needed.")
+            downloaded.append(filename)
+        return downloaded
