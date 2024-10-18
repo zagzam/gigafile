@@ -23,6 +23,7 @@ def main():
     parser.add_argument('-m', '--copy-size', dest='chunk_copy_size', default="1MB", help='specifies size to copy the main file into pieces [default: 1MB]')
     parser.add_argument('-t', '--timeout', type=int, default=10, help='specifies timeout time (in seconds) [default: 10]')
     parser.add_argument('-k', '--key', '--password', dest='key', default=None, help='specifies the key/password for the file')
+    parser.add_argument('--mute', action='store_true', help='mute warnings')
 
     args = parser.parse_args()
 

@@ -80,7 +80,8 @@ def split_file(input_file, out, target_size=None, start=0, chunk_copy_size=1024*
 
 
 class GFile:
-    def __init__(self, uri, progress=False, thread_num=4, chunk_size=1024*1024*10, chunk_copy_size=1024*1024, timeout=10, aria2=False, key=None, **kwargs) -> None:
+    def __init__(self, uri, progress=False, thread_num=4, chunk_size=1024*1024*10, chunk_copy_size=1024*1024, timeout=10,
+                 aria2=False, key=None, mute=False, **kwargs) -> None:
         self.uri = uri
         self.chunk_size = size_str_to_bytes(chunk_size)
         self.chunk_copy_size = size_str_to_bytes(chunk_copy_size)
@@ -94,6 +95,7 @@ class GFile:
         self.cookies = None
         self.current_chunk = 0
         self.aria2 = aria2
+        self.mute = mute
         self.key = key
 
 
@@ -146,8 +148,9 @@ class GFile:
                 streamer = StreamingIterator(size, gen())
                 resp = self.session.post(f"https://{self.server}/upload_chunk.php", data=streamer, headers=headers)
             except Exception as ex:
-                print(ex)
-                print('Retrying...')
+                if not self.mute:
+                    print(ex)
+                    print('Retrying...')
             else:
                 break
 
