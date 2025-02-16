@@ -171,7 +171,8 @@ class GFile:
         assert Path(self.uri).exists()
         size = Path(self.uri).stat().st_size
         chunks = math.ceil(size / self.chunk_size)
-        print(f'Filesize {bytes_to_size_str(size)}, chunk size: {bytes_to_size_str(self.chunk_size)}, total chunks: {chunks}')
+        if not self.mute:
+            print(f'Filesize {bytes_to_size_str(size)}, chunk size: {bytes_to_size_str(self.chunk_size)}, total chunks: {chunks}')
 
         if self.progress:
             self.pbar = []
