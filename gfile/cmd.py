@@ -14,7 +14,7 @@ class Action(Enum):
 def main():
     parser = argparse.ArgumentParser(prog='Gfile')
     parser.add_argument('action', type=Action, choices=list(Action), help='upload or download')
-    parser.add_argument('uri', help='filename to upload or url to download')
+    parser.add_argument('file_or_url', help='filename to upload or url to download')
     parser.add_argument('-p', '--hide-progress', dest='progress', action='store_false', default=True, help='hide progress bar')
     parser.add_argument('-o', '--output', type=str, default=None, help='output filename for download (default: use original name)')
     parser.add_argument('--aria2', nargs='?', const="-x10 -s10", default=None, help='download with aria2. You can also specify optional arguments (default: "-x10 -s10", make sure to quote). `-o` is already automatically included.')
@@ -24,6 +24,10 @@ def main():
     parser.add_argument('-t', '--timeout', type=int, default=10, help='specifies timeout time (in seconds) [default: 10]')
     parser.add_argument('-k', '--key', '--password', dest='key', default=None, help='specifies the key/password for the file')
     parser.add_argument('--mute', action='store_true', help='mute initial message and warnings (only the final result and errors will be shown)')
+    verify_group = parser.add_mutually_exclusive_group()
+    verify_group.add_argument('--verify', dest='verify', action='store_true', default=True, help='enable verification (default)')
+    verify_group.add_argument('--no-verify', dest='verify', action='store_false', help='disable verification')
+
 
     args = parser.parse_args()
 
