@@ -2,8 +2,12 @@
 import argparse
 from enum import Enum
 
-if __name__ == "__main__": from gfile import GFile
-else:                      from .gfile import GFile
+if __name__ == '__main__' and __package__ is None:
+    from gfile import GFile
+    from __init__ import __version__
+else:
+    from .gfile import GFile
+    from . import __version__
 
 class Action(Enum):
     download = 'download'
@@ -13,6 +17,7 @@ class Action(Enum):
 
 def main():
     parser = argparse.ArgumentParser(prog='Gfile')
+    parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}', help='show version and exit')
     parser.add_argument('action', type=Action, choices=list(Action), help='upload or download')
     parser.add_argument('file_or_url', help='filename to upload or url to download')
     parser.add_argument('-p', '--hide-progress', dest='progress', action='store_false', default=True, help='hide progress bar')
@@ -27,7 +32,6 @@ def main():
     verify_group = parser.add_mutually_exclusive_group()
     verify_group.add_argument('--verify', dest='verify', action='store_true', default=True, help='enable verification (default)')
     verify_group.add_argument('--no-verify', dest='verify', action='store_false', help='disable verification')
-
 
     args = parser.parse_args()
 
