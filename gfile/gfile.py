@@ -221,8 +221,9 @@ class GFile:
             files_info = self.parse_download_page(uploaded_url)
             file_id = files_info[0][2]
             download_url = uploaded_url.rsplit('/', 1)[0] + '/download.php?file=' + file_id
-            uploaded_size = int(self.session.head(download_url).headers.get('Content-Length'))
-            if uploaded_size != f_size:
+            with self.session.get(download_url, stream=True) as r:
+                uploaded_size = int(r.headers.get('Content-Length', 0))
+            if not uploaded_size or uploaded_size != f_size:
                 print(f"ERROR: File size of {f.name} at {uploaded_url} mismatches: expected {f_size}, got {uploaded_size}.")
                 print('This means the upload is corrupted. Please try again.')
                 return
