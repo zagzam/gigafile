@@ -247,14 +247,7 @@ class GFile:
             if soup.select_one('#contents_matomete'):
                 print('Matomete page (multiple files). Files will be downloaded one by one.')
                 for idx, ele in enumerate(soup.select('.matomete_file'), 1):
-                    try:
-                        web_name = ele.select_one('.matomete_file_info > span:nth-child(2)').text.strip()
-                        # Fallback to generic name if extraction fails or returns empty
-                        if not web_name:
-                            web_name = f'file_{idx}'
-                    except (AttributeError, TypeError):
-                        # If filename extraction fails, use generic name
-                        web_name = f'file_{idx}'
+                    web_name = f'file_{idx}'
                     
                     try:
                         file_id = re.search(r'download\(\d+, *\'(.+?)\'', ele.select_one('.download_panel_btn_dl')['onclick'])[1]
