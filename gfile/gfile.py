@@ -246,10 +246,27 @@ class GFile:
             soup = BeautifulSoup(r.text, 'html.parser')
             if soup.select_one('#contents_matomete'):
                 print('Matomete page (multiple files). Files will be downloaded one by one.')
-                for ele in soup.select('.matomete_file'):
-                    web_name = ele.select_one('.matomete_file_info > span:nth-child(2)').text.strip()
-                    file_id = re.search(r'download\(\d+, *\'(.+?)\'', ele.select_one('.download_panel_btn_dl')['onclick'])[1]
-                    size_str = re.search(r'（(.+?)）', ele.select_one('.matomete_file_info > span:nth-child(3)').text.strip())[1]
+                for idx, ele in enumerate(soup.select('.matomete_file'), 1):
+                    try:
+                        web_name = ele.select_one('.matomete_file_info > span:nth-child(2)').text.strip()
+                        # Fallback to generic name if extraction fails or returns empty
+                        if not web_name:
+                            web_name = f'file_{idx}'
+                    except (AttributeError, TypeError):
+                        # If filename extraction fails, use generic name
+                        web_name = f'file_{idx}'
+                    
+                    try:
+                        file_id = re.search(r'download\(\d+, *\'(.+?)\'', ele.select_one('.download_panel_btn_dl')['onclick'])[1]
+                    except (AttributeError, TypeError, IndexError) as e:
+                        print(f'WARNING: Could not extract file_id for file {idx}. Skipping.')
+                        continue
+                    
+                    try:
+                        size_str = re.search(r'（(.+?)）', ele.select_one('.matomete_file_info > span:nth-child(3)').text.strip())[1]
+                    except (AttributeError, TypeError, IndexError):
+                        size_str = 'Unknown'
+                    
                     files_info.append((web_name, size_str, file_id))
             else:
                 file_id = m[1]
@@ -276,6 +293,9 @@ class GFile:
             # only sanitize web filename. User provided output string(s) are on their own.
             if not output:
                 filename = re.sub(r'[\\/:*?"<>|]', '_', web_name)
+                # Fallback to generic name if filename is empty or invalid
+                if not filename or filename.isspace():
+                    filename = f'file_{idx}'
             else:
                 if len(files_info) > 1:
                     # if there are more than one files, append idx to the filename
